@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { ExecutiveMetric } from "../lib/metrics";
 import {
   formatMetric,
   formatVariance,
 } from "../lib/formatters";
+import { useDialog } from "../lib/useDialog";
 import RAGBadge from "./RAGBadge";
 
 type LineageItem = {
@@ -52,24 +53,21 @@ export default function MetricDrawer({
   metric: ExecutiveMetric | null;
   onClose: () => void;
 }) {
+  return metric ? <MetricDialog key={metric.metric_id} metric={metric} onClose={onClose} /> : null;
+}
+
+function MetricDialog({ metric, onClose }: { metric: ExecutiveMetric; onClose: () => void }) {
+  const dialog = useRef<HTMLElement>(null);
+  useDialog(dialog, onClose);
   const [lineage, setLineage] = useState<LineageItem[]>([]);
   const [dqResults, setDQResults] = useState<DQResult[]>([]);
   const [changes, setChanges] = useState<ChangeItem[]>([]);
-  const [loadingTrust, setLoadingTrust] = useState(false);
+  const [loadingTrust, setLoadingTrust] = useState(true);
 
   useEffect(() => {
-    if (!metric) {
-      setLineage([]);
-      setDQResults([]);
-      setChanges([]);
-      return;
-    }
-
     let cancelled = false;
 
     async function loadTrustData() {
-      setLoadingTrust(true);
-
       const [lineageResponse, dqResponse, changeResponse] =
         await Promise.all([
           supabase
@@ -167,8 +165,6 @@ export default function MetricDrawer({
       result.result_status?.toUpperCase() === "FAIL"
   ).length;
 
-  if (!metric) return null;
-
   function formatDate(date?: string | null) {
     if (!date) return "—";
 
@@ -197,14 +193,19 @@ export default function MetricDrawer({
     <>
       <div
         className="drawer-backdrop"
+        data-dialog-backdrop
+        aria-hidden="true"
         onClick={onClose}
       />
 
       <aside
+        ref={dialog}
+        tabIndex={-1}
         className="metric-drawer"
         role="dialog"
         aria-modal="true"
-        aria-label={`${metric.metric_name} detail`}
+        aria-labelledby="metric-drawer-title"
+        aria-describedby="metric-drawer-description"
       >
         {/* HEADER */}
 
@@ -214,7 +215,7 @@ export default function MetricDrawer({
               {metric.domain}
             </div>
 
-            <h2>{metric.metric_name}</h2>
+            <h2 id="metric-drawer-title">{metric.metric_name}</h2>
           </div>
 
           <button
@@ -308,7 +309,7 @@ export default function MetricDrawer({
           </div>
 
           <p className="drawer-body">
-            {metric.business_definition || "—"}
+            <span id="metric-drawer-description">{metric.business_definition || "No business definition recorded."}</span>
           </p>
 
           <div className="drawer-list drawer-list-spaced">

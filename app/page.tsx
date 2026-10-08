@@ -1,467 +1,132 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { supabase } from "../lib/supabase";
-import {
-  ExecutiveMetric,
-  MetricHistoryPoint,
-} from "../lib/metrics";
-
-import MetricDrawer from "../components/MetricDrawer";
+import type { ExecutiveMetric, MetricHistoryPoint } from "../lib/metrics";
+import { dashboardValue, isCertified, parseDashboard, parseDashboardHistory, type DashboardData, type DashboardMetric } from "../lib/executiveDashboard";
+import { formatGovernanceDate } from "../lib/governance";
 import ExecutiveHeader from "../components/ExecutiveHeader";
-import MetricCard from "../components/MetricCard";
-import SignalPanel from "../components/SignalPanel";
-import SectionLabel from "../components/SectionLabel";
+import ExecutiveMetricTile from "../components/ExecutiveMetricTile";
+import MetricDrawer from "../components/MetricDrawer";
 import ArchitectureModal from "../components/ArchitectureModal";
+import SectionLabel from "../components/SectionLabel";
+import "./executive-v2.css";
+
+type State = { status: "loading" } | { status: "error" } | { status: "empty" } |
+  { status: "ready"; data: DashboardData; history: MetricHistoryPoint[]; historyUnavailable: boolean };
 
 export default function Home() {
-  const [metrics, setMetrics] = useState<ExecutiveMetric[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [architectureOpen, setArchitectureOpen] =
-    useState(false);
-
-  const [selectedMetric, setSelectedMetric] =
-    useState<ExecutiveMetric | null>(null);
-
-  const [metricHistory, setMetricHistory] =
-    useState<MetricHistoryPoint[]>([]);
-
+  const [state, setState] = useState<State>({ status: "loading" });
+  const [attempt, setAttempt] = useState(0);
+  const [selected, setSelected] = useState<ExecutiveMetric | null>(null);
+  const [architectureOpen, setArchitectureOpen] = useState(false);
   useEffect(() => {
-    async function loadMetrics() {
-      const { data, error } = await supabase
-        .from("executive_metrics_api")
-        .select("*");
-
-      if (error) {
-        console.error("Supabase error:", error);
-      } else {
-        setMetrics((data as ExecutiveMetric[]) || []);
-      }
-
-      const { data: historyData, error: historyError } =
-        await supabase
-          .from("metric_history_api")
-          .select("*")
-          .order("as_of_date", { ascending: true });
-
-      if (historyError) {
-        console.error(
-          "Metric history error:",
-          historyError
-        );
-      } else {
-        setMetricHistory(
-          (historyData ?? []) as MetricHistoryPoint[]
-        );
-      }
-
-      setLoading(false);
-    }
-
-    loadMetrics();
-  }, []);
-
-  const metricMap = useMemo(() => {
-    return Object.fromEntries(
-      metrics.map((metric) => [
-        metric.metric_name,
-        metric,
-      ])
-    );
-  }, [metrics]);
-
-  /* =========================================================
-     DASHBOARD STRUCTURE
-     ========================================================= */
-
-  const financialMetrics = [
-    "Loans Written",
-    "Loan Approval Rate",
-    "30+ DPD Rate",
-    "Net Credit Loss",
-  ];
-
-  const customerMetrics = [
-    "Active Customer Rate",
-    "Net Promoter Score",
-    "Complaint Volume",
-    "Complaints > SLA",
-  ];
-
-  /* =========================================================
-     DYNAMIC RAG COUNTS
-     ========================================================= */
-
-  const certifiedMetrics = metrics.filter(
-    (metric) =>
-      metric.certification_status ===
-      "Executive Certified"
-  );
-
-  const greenCount = metrics.filter(
-    (metric) => metric.rag_status === "GREEN"
-  ).length;
-
-  const amberCount = metrics.filter(
-    (metric) => metric.rag_status === "AMBER"
-  ).length;
-
-  const redCount = metrics.filter(
-    (metric) => metric.rag_status === "RED"
-  ).length;
-
-  /* =========================================================
-   EXECUTIVE SUMMARY HELPERS
-   ========================================================= */
-
-  const loansWritten = metricMap["Loans Written"];
-  const approvalRate = metricMap["Loan Approval Rate"];
-  const dpdRate = metricMap["30+ DPD Rate"];
-  const netCreditLoss = metricMap["Net Credit Loss"];
-
-  const latestAsOfDate = metrics
-    .map((metric) => metric.as_of_date)
-    .filter(Boolean)
-    .sort()
-    .at(-1);
-
-  const latestRefresh = metrics
-    .map((metric) => metric.calculated_at)
-    .filter(Boolean)
-    .sort()
-    .at(-1);
-
-  function formatAsOfDate(date?: string) {
-    if (!date) return "—";
-
-    return new Intl.DateTimeFormat("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    })
-      .format(new Date(date))
-      .toUpperCase();
-  }
-
-  function formatRefreshTime(date?: string) {
-    if (!date) return "—";
-
-    return new Intl.DateTimeFormat("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-      timeZone: "Asia/Dubai",
-    }).format(new Date(date));
-  }
-
-  function signedTrend(metric?: ExecutiveMetric) {
-    if (!metric || metric.trend_pct === null) return "—";
-
-    const value = Number(metric.trend_pct);
-
-    if (Number.isNaN(value)) return "—";
-
-    const sign = value > 0 ? "+" : "";
-
-    return `${sign}${value.toFixed(1)}%`;
-  }
-
-  /* =========================================================
-     REUSABLE CARD RENDERER
-     ========================================================= */
-
-  function renderMetric(name: string) {
-    const metric = metricMap[name];
-
-    if (!metric) return null;
-
-    const history = metricHistory.filter(
-      (point) =>
-        point.metric_id === metric.metric_id
-    );
-
-    return (
-      <MetricCard
-        key={metric.metric_id}
-        metric={metric}
-        history={history}
-        onClick={setSelectedMetric}
-      />
-    );
-  }
-
-  return (
-    <main className="page-shell">
-      <div className="page-wrap">
-
-        {/* HEADER */}
-
-        <ExecutiveHeader />
-
-        {/* EXECUTIVE VIEW */}
-
-        <section className="executive-overview">
-
-          <div className="executive-overview-main">
-
-            <div className="executive-overview-top">
-              <SectionLabel>EXECUTIVE VIEW</SectionLabel>
-
-              <div className="as-at">
-                AS AT {formatAsOfDate(latestAsOfDate)}
-              </div>
-            </div>
-
-            <h1 className="executive-headline">
-              Growth remains resilient;
-              <span> early credit deterioration is emerging.</span>
-            </h1>
-
-            <div className="executive-evidence">
-
-              <div className="evidence-block">
-                <div className="evidence-label">
-                  EVIDENCE
-                </div>
-
-                <div className="evidence-items">
-                  <span>
-                    Loans written{" "}
-                    <strong>
-                      {signedTrend(loansWritten)}
-                    </strong>
-                  </span>
-
-                  <span>
-                    Approval{" "}
-                    <strong>
-                      {approvalRate
-                        ? `${Number(
-                          approvalRate.metric_value
-                        ).toFixed(1)}%`
-                        : "—"}
-                    </strong>
-                  </span>
-
-                  <span>
-                    30+ DPD{" "}
-                    <strong
-                      className={
-                        dpdRate?.rag_status === "RED"
-                          ? "evidence-red"
-                          : dpdRate?.rag_status === "AMBER"
-                            ? "evidence-amber"
-                            : ""
-                      }
-                    >
-                      {signedTrend(dpdRate)}
-                    </strong>
-                  </span>
-
-                  <span>
-                    Net credit loss{" "}
-                    <strong
-                      className={
-                        netCreditLoss?.rag_status === "RED"
-                          ? "evidence-red"
-                          : netCreditLoss?.rag_status === "AMBER"
-                            ? "evidence-amber"
-                            : ""
-                      }
-                    >
-                      {signedTrend(netCreditLoss)}
-                    </strong>
-                  </span>
-                </div>
-              </div>
-
-              <div className="attention-block">
-                <div className="evidence-label">
-                  MANAGEMENT ATTENTION
-                </div>
-
-                <p>
-                  Monitor migration of recent originations
-                  into 30+ DPD and emerging credit loss.
-                </p>
-              </div>
-
-            </div>
-          </div>
-
-          <aside className="executive-status">
-
-            <div>
-              <SectionLabel>PORTFOLIO STATUS</SectionLabel>
-
-              <div className="status-number">
-                {amberCount + redCount}
-              </div>
-
-              <div className="status-description">
-                metrics requiring management attention
-              </div>
-            </div>
-
-            <div className="status-rag-grid">
-
-              <div>
-                <span className="status-dot-large status-green" />
-                <strong>{greenCount}</strong>
-                <span>Green</span>
-              </div>
-
-              <div>
-                <span className="status-dot-large status-amber" />
-                <strong>{amberCount}</strong>
-                <span>Amber</span>
-              </div>
-
-              <div>
-                <span className="status-dot-large status-red" />
-                <strong>{redCount}</strong>
-                <span>Red</span>
-              </div>
-
-            </div>
-
-            <div className="status-footer">
-              <div>
-                <span>Certified</span>
-                <strong>{certifiedMetrics.length} / {metrics.length}</strong>
-              </div>
-
-              <div>
-                <span>Last refreshed</span>
-                <strong>
-                  {formatRefreshTime(latestRefresh)} GST
-                </strong>
-              </div>
-            </div>
-
-          </aside>
-
-        </section>
-
-        {/* EXECUTIVE SCORECARD */}
-
-        <section className="scorecard-section">
-
-          <div className="scorecard-heading">
-            <div>
-              <SectionLabel>
-                EXECUTIVE SCORECARD
-              </SectionLabel>
-
-              <h2>
-                Performance across the bank.
-              </h2>
-            </div>
-
-            {!loading && (
-              <div className="scorecard-summary">
-                <span>
-                  {certifiedMetrics.length} certified
-                </span>
-
-                <span>
-                  {greenCount} green
-                </span>
-
-                <span>
-                  {amberCount} amber
-                </span>
-
-                {redCount > 0 && (
-                  <span>
-                    {redCount} red
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-
-          {loading ? (
-            <div className="loading-state">
-              Loading governed metrics...
-            </div>
-          ) : (
-            <>
-              {/* FINANCIAL + RISK */}
-
-              <section className="dashboard-band">
-                <div className="dashboard-band-heading">
-                  <SectionLabel>
-                    FINANCIAL &amp; RISK
-                  </SectionLabel>
-
-                  <span>
-                    Growth · Lending · Portfolio quality
-                  </span>
-                </div>
-
-                <div className="financial-kpi-grid">
-                  {financialMetrics.map(renderMetric)}
-                </div>
-              </section>
-
-              {/* CUSTOMER + SERVICE */}
-
-              <section className="dashboard-band customer-band">
-                <div className="dashboard-band-heading">
-                  <SectionLabel>
-                    CUSTOMER &amp; SERVICE
-                  </SectionLabel>
-
-                  <span>
-                    Engagement · Advocacy · Service performance
-                  </span>
-                </div>
-
-                <div className="customer-kpi-grid">
-                  {customerMetrics.map(renderMetric)}
-                </div>
-              </section>
-            </>
-          )}
-
-        </section>
-
-        {/* DATA TRUST */}
-
-        <footer className="trust-footer">
-          <div>
-            <div className="trust-title">
-              Trusted by design
-            </div>
-
-            <div className="trust-copy">
-              Certified metrics · defined ownership ·
-              governed data products
-            </div>
-          </div>
-
-          <button
-            className="trust-button"
-            type="button"
-            onClick={() => setArchitectureOpen(true)}
-          >
-            Explore architecture →
-          </button>
-        </footer>
-
-      </div>
-
-      <MetricDrawer
-        metric={selectedMetric}
-        onClose={() =>
-          setSelectedMetric(null)
+    const controller = new AbortController();
+    async function load() {
+      try {
+        const responses = await Promise.allSettled([
+          supabase.from("executive_metrics_api").select("*").abortSignal(controller.signal),
+          supabase.from("executive_extended_metrics_api").select("metric_id,metric_name,domain,metric_value,unit,as_of_date").abortSignal(controller.signal),
+          supabase.from("metric_history_api").select("metric_id,metric_name,domain,unit,metric_value,as_of_date").order("as_of_date", { ascending: true }).abortSignal(controller.signal),
+        ]);
+        const values = responses.slice(0, 2).map((response) => {
+          if (response.status === "rejected") throw response.reason;
+          if (response.value.error) throw response.value.error;
+          return response.value.data;
+        });
+        const data = parseDashboard(values[0], values[1]);
+        let history: MetricHistoryPoint[] = [];
+        let historyUnavailable = true;
+        const historyResponse = responses[2];
+        if (historyResponse.status === "fulfilled" && !historyResponse.value.error) {
+          try { history = parseDashboardHistory(historyResponse.value.data); historyUnavailable = false; } catch { /* Show current metrics without unsupported trends. */ }
         }
-      />
-      <ArchitectureModal
-        open={architectureOpen}
-        onClose={() => setArchitectureOpen(false)}
-      />
-    </main>
-  );
+        if (!controller.signal.aborted) setState(data ? { status: "ready", data, history, historyUnavailable } : { status: "empty" });
+      } catch {
+        if (!controller.signal.aborted) setState({ status: "error" });
+      }
+    }
+    void load();
+    return () => controller.abort();
+  }, [attempt]);
+  function retry() { setState({ status: "loading" }); setAttempt((value) => value + 1); }
+  return <main className="page-shell executive-v2"><div className="page-wrap">
+    <ExecutiveHeader />
+    <section className="v2-hero">
+      <div className="v2-heading-row"><SectionLabel>EXECUTIVE INTELLIGENCE</SectionLabel><span className="v2-synthetic">SYNTHETIC DATA · {state.status === "ready" ? `AS AT ${formatGovernanceDate(state.data.date).toUpperCase()}` : "REPORTING DATE PENDING"}</span></div>
+      <h1>The bank, at a glance.</h1>
+      <p>One trusted view of growth, financial position and emerging risk.</p>
+    </section>
+    {state.status === "loading" && <div className="v2-state" role="status">Loading the executive snapshot…</div>}
+    {state.status === "error" && <div className="v2-state" role="alert"><h2>The executive snapshot is unavailable.</h2><p>One or more metric sources could not be read, are incomplete, or contain conflicting records or reporting dates.</p><button type="button" onClick={retry}>Try again</button></div>}
+    {state.status === "empty" && <div className="v2-state" role="status"><h2>No executive metrics are published.</h2><p>The views returned no visible records.</p><button type="button" onClick={retry}>Refresh snapshot</button></div>}
+    {state.status === "ready" && <ExecutiveSnapshot state={state} onSelect={setSelected} />}
+    <footer className="trust-footer"><div><div className="trust-title">Trusted by design</div><div className="trust-copy">Certified definitions · visible ownership · proposed measures clearly identified</div><div className="trust-copy">Demonstration environment · Synthetic data · No live banking information</div></div><button className="trust-button" type="button" onClick={() => setArchitectureOpen(true)}>Explore architecture →</button></footer>
+  </div>
+    <MetricDrawer metric={selected} onClose={() => setSelected(null)} />
+    <ArchitectureModal open={architectureOpen} onClose={() => setArchitectureOpen(false)} />
+  </main>;
+}
+
+function ExecutiveSnapshot({ state, onSelect }: { state: Extract<State, { status: "ready" }>; onSelect: (metric: ExecutiveMetric) => void }) {
+  const { data, history } = state;
+  const all = [...data.certified, ...data.proposed];
+  const byName = new Map(all.map((metric) => [metric.metric_name, metric]));
+  function metric(name: string): DashboardMetric { return byName.get(name)!; }
+  function value(name: string) { return dashboardValue(metric(name)); }
+  function tile(name: string, note?: string, headline = false, compact = false) {
+    return <ExecutiveMetricTile key={name} metric={metric(name)} note={note} headline={headline} compact={compact} history={history} onSelect={onSelect} />;
+  }
+  const attention = data.certified.filter((item) => ["AMBER", "RED"].includes(item.rag_status));
+  const period = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${data.date}T00:00:00Z`));
+  const dpd = metric("30+ DPD Rate") as ExecutiveMetric;
+  const active = metric("Active Customer Rate") as ExecutiveMetric;
+  return <>
+    <section aria-label="Headline metrics" className="v2-headline-grid">
+      {tile("Loan Approval Rate", "Approved applications / total applications", true)}
+      {tile("30+ DPD Rate", "Balance-weighted delinquent exposure", true)}
+      {tile("Savings Deposits", "Open savings account balances", true)}
+      {tile("Active Customer Rate", "Eligible customers with qualifying 30-day activity", true)}
+    </section>
+    <div className="v2-trust-line"><span>{data.certified.length} Executive Certified · {data.proposed.length} Proposed</span><span>{attention.length} certified metrics require attention under existing RAG rules</span></div>
+    {state.historyUnavailable && <p className="v2-notice" role="status">Historical data is unavailable. Current values remain visible; trend indicators are omitted.</p>}
+
+    <section className="v2-section" aria-labelledby="v2-growth-title">
+      <div className="v2-section-heading"><div><SectionLabel>01 · GROWTH &amp; CREDIT</SectionLabel><h2 id="v2-growth-title">Origination, exposure and credit cost.</h2></div><Link href="/credit">Explore Credit &amp; Lending →</Link></div>
+      <div className="v2-growth-grid">{tile("Loans Written", "Original funded loan value for the reporting period")}{tile("Gross Loan Portfolio", "Outstanding principal across funded loans")}{tile("Net Credit Loss", "Write-offs less subsequent recoveries")}</div>
+    </section>
+
+    <section className="v2-section v2-financial" aria-labelledby="v2-financial-title">
+      <div><SectionLabel>02 · FINANCIAL POSITION</SectionLabel><h2 id="v2-financial-title">Balances in context.</h2><p>Deposits and loan balances describe the financial position. They are not revenue or measures of profitability.</p></div>
+      <dl className="v2-financial-references">{["Savings Deposits", "Gross Loan Portfolio", "Net Credit Loss"].map((name) => {
+        const item = metric(name);
+        const certified = isCertified(item);
+        const content = <><span>{value(name)}</span><small>{certified ? item.certification_status : "Proposed · Not certified"} · {certified ? "View detail" : "View definition"} →</small></>;
+        return <div key={name}><dt>{name}</dt><dd>{certified ? <button type="button" onClick={() => onSelect(item)}>{content}</button> : <Link href={`/metrics?metric=${encodeURIComponent(item.metric_id)}`}>{content}</Link>}</dd></div>;
+      })}</dl>
+    </section>
+
+    <section className="v2-section" aria-labelledby="v2-customer-title">
+      <div className="v2-section-heading"><div><SectionLabel>03 · CUSTOMER &amp; PRODUCT</SectionLabel><h2 id="v2-customer-title">Engagement beyond account ownership.</h2></div><Link href="/governance">Understand customer definitions →</Link></div>
+      <p className="v2-section-copy">Transaction volume and value cover {period}. Transaction Value is gross recorded transaction value, not net payment flows or revenue.</p>
+      <div className="v2-customer-grid">{tile("Active Customers (30D)", "Eligible customers with qualifying trailing 30-day activity")}{tile("Transaction Volume", `Recorded transactions · ${period}`)}{tile("Transaction Value", `Gross recorded value · ${period}`)}{tile("Open Savings Accounts", "Open savings account population")}</div>
+    </section>
+
+    <section className="v2-section" aria-labelledby="v2-experience-title">
+      <SectionLabel>04 · CUSTOMER EXPERIENCE</SectionLabel><h2 id="v2-experience-title">Advocacy and service delivery.</h2>
+      <div className="v2-experience-grid">{tile("Net Promoter Score", undefined, false, true)}{tile("Complaint Volume", undefined, false, true)}{tile("Complaints > SLA", undefined, false, true)}</div>
+    </section>
+
+    <section className="v2-interpretation" aria-labelledby="v2-interpretation-title">
+      <SectionLabel>MANAGEMENT PERSPECTIVE</SectionLabel><h2 id="v2-interpretation-title">What deserves attention.</h2>
+      <div className="v2-interpretation-grid">
+        <div><h3>Lending &amp; credit quality</h3><p>{value("Loan Approval Rate")} of applications were approved, with {value("Loans Written")} in funded lending. The balance-weighted 30+ DPD rate is {value("30+ DPD Rate")}{dpd.target_value !== null ? ` against a ${dashboardValue({ ...dpd, metric_value: dpd.target_value })} target` : ""}. Its governed RAG status is {dpd.rag_status.toLowerCase()}.</p></div>
+        <div><h3>Customer engagement</h3><p>{value("Active Customers (30D)")} customers had qualifying activity in the trailing 30 days. The certified Active Customer Rate is {value("Active Customer Rate")}{active.target_value !== null ? ` against a ${dashboardValue({ ...active, metric_value: active.target_value })} target` : ""}. Active-customer count remains a Proposed catalogue metric.</p></div>
+        <div><h3>Deposits &amp; transaction activity</h3><p>Savings balances total {value("Savings Deposits")} across {value("Open Savings Accounts")} open accounts. {period} contains {value("Transaction Volume")} transactions and {value("Transaction Value")} in gross recorded value. These measures are Proposed and do not represent revenue.</p></div>
+      </div>
+      <p className="v2-attention-list">Management attention under existing RAG rules: {attention.length ? attention.map((item) => `${item.metric_name} (${item.rag_status.toLowerCase()})`).join(" · ") : "No certified metrics are amber or red."}</p>
+      <p className="v2-disclaimer">This synthetic reporting snapshot does not establish causation or whether growth is responsible. Proposed measures await formal approval and carry no assigned RAG thresholds.</p>
+    </section>
+  </>;
 }

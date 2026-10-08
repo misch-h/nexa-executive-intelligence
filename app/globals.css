@@ -14,18 +14,18 @@
   --navy: #13202b;
 
   --muted: #61676d;
-  --soft: #8a9096;
+  --soft: #666d73;
 
   --line: #d7dade;
   --line-soft: #e8eaec;
 
-  --bronze: #a66f35;
+  --bronze: #99642e;
   --bronze-soft: #d8b48c;
 
   --green: #28705a;
   --green-bg: #eaf5f0;
 
-  --amber: #a66a18;
+  --amber: #965c12;
   --amber-bg: #fbf1df;
 
   --red: #b7443d;
@@ -95,6 +95,20 @@ button {
   gap: 8px;
   color: var(--muted);
   font-size: 12px;
+}
+
+.executive-nav { display: flex; gap: 24px; flex-wrap: wrap; }
+.executive-nav a { color: var(--muted); font-size: 12px; text-decoration: none; padding: 8px 0; border-bottom: 1px solid transparent; }
+.executive-nav a[aria-current="page"] { color: var(--ink); border-color: var(--bronze); }
+.executive-nav a:hover { color: var(--bronze); }
+.executive-nav a:focus-visible { outline: 2px solid var(--bronze); outline-offset: 5px; }
+@media (min-width: 721px) and (max-width: 1250px) {
+  .executive-header { height: auto; min-height: 82px; padding: 18px 0; gap: 18px; flex-wrap: wrap; }
+  .executive-nav { order: 3; width: 100%; }
+}
+@media (max-width: 720px) {
+  .executive-header { height: auto; min-height: 82px; padding: 18px 0; gap: 18px; flex-wrap: wrap; }
+  .executive-nav { order: 3; width: 100%; gap: 20px; }
 }
 
 .status-dot {
@@ -931,10 +945,6 @@ button {
 @media (max-width: 680px) {
   .page-shell {
     padding: 0 16px 36px;
-  }
-
-  .executive-header {
-    height: 72px;
   }
 
   .header-meta {

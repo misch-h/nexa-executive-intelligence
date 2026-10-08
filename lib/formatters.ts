@@ -13,7 +13,7 @@ export function formatMetric(
     name === "30+ DPD Rate" ||
     name === "Active Customer Rate"
   ) {
-    return `${numericValue.toFixed(1)}%`;
+    return `${numericValue.toFixed(name === "30+ DPD Rate" ? 2 : 1)}%`;
   }
 
   if (name === "Net Promoter Score") {

@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRef } from "react";
+import Image from "next/image";
+import { useDialog } from "../lib/useDialog";
 import { createPortal } from "react-dom";
 
 export default function ArchitectureModal({
@@ -10,41 +12,28 @@ export default function ArchitectureModal({
   open: boolean;
   onClose: () => void;
 }) {
-  const [mounted, setMounted] = useState(false);
+  if (!open) return null;
+  return <ArchitectureDialog onClose={onClose} />;
+}
 
-  useEffect(() => {
-    setMounted(true);
-
-    if (!open) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open, onClose]);
-
-  if (!open || !mounted) return null;
+function ArchitectureDialog({ onClose }: { onClose: () => void }) {
+  const dialog = useRef<HTMLDivElement>(null);
+  useDialog(dialog, onClose);
 
   return createPortal(
     <div
+      ref={dialog}
+      tabIndex={-1}
       className="architecture-overlay"
       role="dialog"
       aria-modal="true"
-      aria-label="Nexa Executive Intelligence architecture"
+      aria-labelledby="architecture-title"
+      aria-describedby="architecture-description"
     >
       <button
         className="architecture-backdrop"
+        tabIndex={-1}
+        aria-hidden="true"
         type="button"
         onClick={onClose}
         aria-label="Close architecture"
@@ -57,9 +46,9 @@ export default function ArchitectureModal({
               NEXA EXECUTIVE INTELLIGENCE
             </div>
 
-            <h2>End-to-end architecture</h2>
+            <h2 id="architecture-title">End-to-end architecture</h2>
 
-            <p>
+            <p id="architecture-description">
               From source data to governed executive intelligence.
             </p>
           </div>
@@ -75,7 +64,10 @@ export default function ArchitectureModal({
         </header>
 
         <div className="architecture-image-area">
-          <img
+          <Image
+            width={1774}
+            height={887}
+            unoptimized
             src="/architecture/nexa-architecture.png"
             alt="Nexa Executive Intelligence end-to-end architecture"
           />

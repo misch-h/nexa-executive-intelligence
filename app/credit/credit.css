@@ -1,0 +1,74 @@
+.credit-page { background: var(--white); }
+.credit-page .page-wrap { max-width: 1360px; }
+.credit-intro { padding: 48px 0 38px; }
+.credit-heading-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+.credit-synthetic { padding: 7px 10px; border: 1px solid var(--line-soft); border-radius: 3px; color: var(--muted); font-size: 9px; letter-spacing: .12em; }
+.credit-intro h1 { margin: 26px 0 18px; font-size: clamp(34px, 4.4vw, 62px); line-height: 1.08; letter-spacing: -.055em; font-weight: 600; }
+.credit-intro h1 span { color: var(--muted); }
+.credit-intro p, .credit-copy { color: var(--muted); font-size: 14px; line-height: 1.75; max-width: 920px; }
+.credit-scorecard { border-top: 1px solid var(--line); padding-top: 25px; }
+.credit-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 24px 0; }
+.credit-kpi { padding: 0 24px; border-right: 1px solid var(--line-soft); }
+.credit-kpi:first-child { padding-left: 0; }
+.credit-kpi:last-child { border: 0; padding-right: 0; }
+.credit-kpi h2 { min-height: 36px; font-size: 13px; font-weight: 500; color: var(--muted); margin: 0 0 22px; }
+.credit-kpi-value { font-size: clamp(25px, 2.7vw, 40px); font-weight: 600; letter-spacing: -.05em; font-variant-numeric: tabular-nums; }
+.credit-kpi-risk .credit-kpi-value { color: var(--amber); }
+.credit-kpi p { font-size: 11px; color: var(--muted); line-height: 1.6; margin: 12px 0 0; }
+.credit-support { display: flex; flex-wrap: wrap; gap: 26px 56px; padding: 20px 0; border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); margin: 0; }
+.credit-support > div { display: flex; align-items: baseline; gap: 16px; }
+.credit-support dt { font-size: 12px; color: var(--muted); }
+.credit-support dd { margin: 0; font-size: 18px; font-weight: 500; }
+.credit-note { font-size: 11px; line-height: 1.7; color: var(--muted); }
+.credit-notice { padding: 12px 16px; border-left: 2px solid var(--amber); background: var(--amber-bg); color: var(--charcoal); font-size: 12px; line-height: 1.7; }
+.credit-section { padding-top: 36px; margin-top: 32px; border-top: 1px solid var(--line); }
+.credit-section h2, .credit-interpretation h2 { font-size: clamp(23px, 2.7vw, 32px); font-weight: 500; letter-spacing: -.035em; margin: 13px 0; }
+.credit-funnel { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 28px 0 20px; border-bottom: 1px solid var(--line-soft); }
+.credit-funnel article { padding: 0 28px 24px; border-left: 1px solid var(--line-soft); }
+.credit-funnel article:first-child { border-left: 0; padding-left: 0; }
+.credit-funnel h3 { font-size: 13px; font-weight: 500; color: var(--muted); margin: 0 0 16px; }
+.credit-funnel strong { font-size: 40px; font-weight: 500; letter-spacing: -.045em; }
+.credit-funnel p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.credit-chart { margin-top: 26px; }
+.credit-chart-header, .credit-chart-row { display: grid; grid-template-columns: 120px minmax(180px, 1fr) 80px 200px; align-items: center; gap: 24px; }
+.credit-chart-header { font-size: 10px; color: var(--muted); padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.credit-chart-header > :nth-last-child(-n+2) { text-align: right; }
+.credit-chart-row { padding: 18px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
+.credit-chart-label { font-weight: 500; }
+.credit-chart-exposure { display: flex; align-items: center; gap: 14px; }
+.credit-chart-exposure > span { min-width: 62px; text-align: right; font-size: 12px; color: var(--muted); }
+.credit-bar-track { background: var(--paper); height: 9px; flex: 1; overflow: hidden; }
+.credit-bar-track > div { background: var(--navy); height: 100%; }
+.credit-elevated .credit-bar-track > div { background: var(--amber); }
+.credit-chart-count, .credit-chart-balance { text-align: right; font-variant-numeric: tabular-nums; }
+.credit-mobile-label { display: none; }
+.credit-interpretation { margin-top: 48px; padding-top: 28px; border-top: 2px solid var(--bronze); }
+.credit-interpretation-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 36px; margin-top: 24px; }
+.credit-interpretation h3 { font-size: 13px; font-weight: 600; }
+.credit-interpretation-grid p { font-size: 14px; line-height: 1.75; color: var(--muted); }
+.credit-state { border-top: 1px solid var(--line); padding: 36px 0; color: var(--muted); line-height: 1.7; }
+.credit-state h2 { color: var(--ink); font-size: 24px; font-weight: 500; }
+.credit-state button { font: inherit; padding: 10px 18px; border: 1px solid var(--line); border-radius: 4px; background: var(--white); cursor: pointer; }
+@media (max-width: 1000px) {
+  .credit-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 0; }
+  .credit-kpi:nth-child(3) { padding-left: 0; }
+  .credit-kpi:nth-child(2) { border-right: 0; }
+  .credit-chart-header, .credit-chart-row { grid-template-columns: 110px minmax(120px, 1fr) 60px 170px; gap: 16px; }
+}
+@media (max-width: 720px) {
+  .credit-page { padding: 0 20px 40px; }
+  .credit-intro { padding-top: 32px; }
+  .credit-kpi { padding-right: 16px; padding-left: 16px; }
+  .credit-kpi-value { font-size: clamp(23px, 5.7vw, 36px); }
+  .credit-support { gap: 16px; flex-direction: column; }
+  .credit-support > div { justify-content: space-between; }
+  .credit-funnel { grid-template-columns: 1fr; }
+  .credit-funnel article { padding: 20px 0; border-left: 0; border-top: 1px solid var(--line-soft); }
+  .credit-chart-header { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .credit-chart-row { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .credit-chart-exposure { grid-column: 1 / -1; grid-row: 2; }
+  .credit-chart-count { grid-column: 2; grid-row: 1; }
+  .credit-chart-balance { grid-column: 1 / -1; text-align: left; font-size: 12px; color: var(--muted); }
+  .credit-mobile-label { display: inline; color: var(--muted); font-size: 11px; }
+  .credit-interpretation-grid { grid-template-columns: 1fr; gap: 8px; }
+}

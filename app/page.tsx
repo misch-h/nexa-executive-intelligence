@@ -8,6 +8,8 @@ import { dashboardValue, isCertified, parseDashboard, parseDashboardHistory, typ
 import { formatGovernanceDate } from "../lib/governance";
 import ExecutiveHeader from "../components/ExecutiveHeader";
 import ExecutiveMetricTile from "../components/ExecutiveMetricTile";
+import VisualLegend from "../components/VisualLegend";
+import RAGBadge from "../components/RAGBadge";
 import MetricDrawer from "../components/MetricDrawer";
 import ArchitectureModal from "../components/ArchitectureModal";
 import SectionLabel from "../components/SectionLabel";
@@ -54,9 +56,10 @@ export default function Home() {
   return <main className="page-shell executive-v2"><div className="page-wrap">
     <ExecutiveHeader />
     <section className="v2-hero">
-      <div className="v2-heading-row"><SectionLabel>EXECUTIVE INTELLIGENCE</SectionLabel><span className="v2-synthetic">SYNTHETIC DATA · {state.status === "ready" ? `AS AT ${formatGovernanceDate(state.data.date).toUpperCase()}` : "REPORTING DATE PENDING"}</span></div>
-      <h1>The bank, at a glance.</h1>
-      <p>One trusted view of growth, financial position and emerging risk.</p>
+      <div className="v2-heading-row"><SectionLabel>EXECUTIVE OVERVIEW</SectionLabel><span className="v2-synthetic">SYNTHETIC DATA · {state.status === "ready" ? `AS AT ${formatGovernanceDate(state.data.date).toUpperCase()}` : "REPORTING DATE PENDING"}</span></div>
+      <h1>Bank Performance Overview</h1>
+      {state.status === "ready" && <p className="v4-header-certification">{state.data.certified.length} Executive Certified <span aria-hidden="true">·</span> {state.data.proposed.length} Proposed</p>}
+      <p>Growth, credit, financial position and customers.</p>
     </section>
     {state.status === "loading" && <div className="v2-state" role="status">Loading the executive snapshot…</div>}
     {state.status === "error" && <div className="v2-state" role="alert"><h2>The executive snapshot is unavailable.</h2><p>One or more metric sources could not be read, are incomplete, or contain conflicting records or reporting dates.</p><button type="button" onClick={retry}>Try again</button></div>}
@@ -78,11 +81,13 @@ function ExecutiveSnapshot({ state, onSelect }: { state: Extract<State, { status
   function tile(name: string, note?: string, headline = false, compact = false) {
     return <ExecutiveMetricTile key={name} metric={metric(name)} note={note} headline={headline} compact={compact} history={history} onSelect={onSelect} />;
   }
-  const attention = data.certified.filter((item) => ["AMBER", "RED"].includes(item.rag_status));
+  const attention = data.certified.filter((item) => ["AMBER", "RED"].includes(item.rag_status))
+    .sort((a, b) => Number(b.rag_status === "RED") - Number(a.rag_status === "RED"));
   const period = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${data.date}T00:00:00Z`));
   const dpd = metric("30+ DPD Rate") as ExecutiveMetric;
   const active = metric("Active Customer Rate") as ExecutiveMetric;
   return <>
+    <div className="v41-overview-legends"><VisualLegend kind="rag" /></div>
     <section aria-label="Headline metrics" className="v2-headline-grid">
       {tile("Loan Approval Rate", "Approved applications / total applications", true)}
       {tile("30+ DPD Rate", "Balance-weighted delinquent exposure", true)}
@@ -91,14 +96,23 @@ function ExecutiveSnapshot({ state, onSelect }: { state: Extract<State, { status
     </section>
     <div className="v2-trust-line"><span>{data.certified.length} Executive Certified · {data.proposed.length} Proposed</span><span>{attention.length} certified metrics require attention under existing RAG rules</span></div>
     {state.historyUnavailable && <p className="v2-notice" role="status">Historical data is unavailable. Current values remain visible; trend indicators are omitted.</p>}
+    <section className="v3-signals" aria-labelledby="requires-attention-title">
+      <h2 id="requires-attention-title">Requires Attention</h2>
+      {attention.length ? <div className="v3-signal-list">{attention.map((item) => <button type="button" className="v3-signal" key={item.metric_id} onClick={() => onSelect(item)}>
+        <span className="v41-signal-name">{item.metric_name}<RAGBadge status={item.rag_status} /></span>
+        <span className="v41-signal-value"><small>Current</small><strong>{dashboardValue(item)}</strong></span>
+        <span className="v41-signal-target"><small>Target {item.rag_direction === "HIGHER_IS_BETTER" ? "≥" : "≤"}</small>{item.target_value === null ? "Not recorded" : dashboardValue({ ...item, metric_value: item.target_value })}</span>
+        <span className="v41-signal-gap"><small>Gap to target</small>{targetGap(item)}</span><span aria-hidden="true">↗</span>
+      </button>)}</div> : <p>No certified metrics require attention under existing RAG rules.</p>}
+    </section>
 
     <section className="v2-section" aria-labelledby="v2-growth-title">
-      <div className="v2-section-heading"><div><SectionLabel>01 · GROWTH &amp; CREDIT</SectionLabel><h2 id="v2-growth-title">Origination, exposure and credit cost.</h2></div><Link href="/credit">Explore Credit &amp; Lending →</Link></div>
+      <div className="v2-section-heading"><div><SectionLabel><span className="v42-section-domain domain-growth">01 · GROWTH &amp; CREDIT</span></SectionLabel><h2 id="v2-growth-title">Origination, exposure and credit cost.</h2></div><Link href="/credit">Explore Credit &amp; Lending →</Link></div>
       <div className="v2-growth-grid">{tile("Loans Written", "Original funded loan value for the reporting period")}{tile("Gross Loan Portfolio", "Outstanding principal across funded loans")}{tile("Net Credit Loss", "Write-offs less subsequent recoveries")}</div>
     </section>
 
     <section className="v2-section v2-financial" aria-labelledby="v2-financial-title">
-      <div><SectionLabel>02 · FINANCIAL POSITION</SectionLabel><h2 id="v2-financial-title">Balances in context.</h2><p>Deposits and loan balances describe the financial position. They are not revenue or measures of profitability.</p></div>
+      <div><SectionLabel><span className="v42-section-domain domain-finance">02 · FINANCIAL POSITION</span></SectionLabel><h2 id="v2-financial-title">Balances in context.</h2><p>Deposits and loan balances describe the financial position. They are not revenue or measures of profitability.</p></div>
       <dl className="v2-financial-references">{["Savings Deposits", "Gross Loan Portfolio", "Net Credit Loss"].map((name) => {
         const item = metric(name);
         const certified = isCertified(item);
@@ -108,13 +122,13 @@ function ExecutiveSnapshot({ state, onSelect }: { state: Extract<State, { status
     </section>
 
     <section className="v2-section" aria-labelledby="v2-customer-title">
-      <div className="v2-section-heading"><div><SectionLabel>03 · CUSTOMER &amp; PRODUCT</SectionLabel><h2 id="v2-customer-title">Engagement beyond account ownership.</h2></div><Link href="/governance">Understand customer definitions →</Link></div>
+      <div className="v2-section-heading"><div><SectionLabel><span className="v42-section-domain domain-customer">03 · CUSTOMER &amp; PRODUCT</span></SectionLabel><h2 id="v2-customer-title">Engagement beyond account ownership.</h2></div><Link href="/governance">Understand customer definitions →</Link></div>
       <p className="v2-section-copy">Transaction volume and value cover {period}. Transaction Value is gross recorded transaction value, not net payment flows or revenue.</p>
       <div className="v2-customer-grid">{tile("Active Customers (30D)", "Eligible customers with qualifying trailing 30-day activity")}{tile("Transaction Volume", `Recorded transactions · ${period}`)}{tile("Transaction Value", `Gross recorded value · ${period}`)}{tile("Open Savings Accounts", "Open savings account population")}</div>
     </section>
 
     <section className="v2-section" aria-labelledby="v2-experience-title">
-      <SectionLabel>04 · CUSTOMER EXPERIENCE</SectionLabel><h2 id="v2-experience-title">Advocacy and service delivery.</h2>
+      <SectionLabel><span className="v42-section-domain domain-operations">04 · CUSTOMER EXPERIENCE</span></SectionLabel><h2 id="v2-experience-title">Advocacy and service delivery.</h2>
       <div className="v2-experience-grid">{tile("Net Promoter Score", undefined, false, true)}{tile("Complaint Volume", undefined, false, true)}{tile("Complaints > SLA", undefined, false, true)}</div>
     </section>
 
@@ -129,4 +143,12 @@ function ExecutiveSnapshot({ state, onSelect }: { state: Extract<State, { status
       <p className="v2-disclaimer">This synthetic reporting snapshot does not establish causation or whether growth is responsible. Proposed measures await formal approval and carry no assigned RAG thresholds.</p>
     </section>
   </>;
+}
+
+function targetGap(metric: ExecutiveMetric) {
+  if (metric.target_value === null) return "Not assessed";
+  const gap = metric.metric_value - metric.target_value;
+  const amount = Math.abs(gap);
+  const formatted = metric.unit === "%" ? `${Number(amount.toFixed(2))} pp` : metric.unit === "AED" ? dashboardValue({ ...metric, metric_value: amount }) : `${new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 }).format(amount)} ${metric.unit === "NPS" ? "points" : metric.unit === "count" ? "counts" : metric.unit}`;
+  return gap === 0 ? "At target" : `${formatted} ${gap > 0 ? "above" : "below"} target`;
 }

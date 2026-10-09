@@ -82,6 +82,7 @@ export default function GovernanceContent() {
         {enterprise ? <>
           <div className="governance-hero-value">{number.format(enterprise.metric_value)}<span>customers</span></div>
           <p className="governance-hero-definition">{enterprise.business_definition}</p>
+          <p className="governance-copy v3-definition-owner">Business owner · Head of Customer</p>
           <p className="governance-copy">This population supplies the numerator for <Link href="/metrics?metric=MET-CUST-001">Active Customer Rate (MET-CUST-001)</Link>, the Executive Certified enterprise KPI. Certification here refers to the customer definition used by that rate.</p>
           <p className="governance-copy">The standalone <Link href="/metrics?metric=MET-CUST-002">Active Customers (30D) count (MET-CUST-002)</Link> remains Proposed and is not an Executive Certified KPI. The shared population count does not change its catalogue status.</p>
           <div className="governance-date">AS AT {formatGovernanceDate(enterprise.as_of_date).toUpperCase()} · TRAILING 30 DAYS</div>

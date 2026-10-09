@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import ExecutiveHeader from "../../components/ExecutiveHeader";
 import SectionLabel from "../../components/SectionLabel";
+import GovernanceReview from "../../components/GovernanceReview";
 import GovernanceContent from "../../components/GovernanceContent";
 import "./governance.css";
 
@@ -19,10 +20,11 @@ export default function GovernancePage() {
             <SectionLabel>METRIC GOVERNANCE</SectionLabel>
             <span className="governance-synthetic">SYNTHETIC DATA · 31 AUG 2026</span>
           </div>
-          <h1>One metric.<br />Multiple interpretations.</h1>
+          <h1>Metric Governance</h1>
           <p>Establishing a trusted enterprise standard across Finance, Product and Credit.</p>
         </section>
-        <GovernanceContent />
+        <GovernanceReview />
+        <details className="v4-population-review"><summary>Customer populations · definitions and reconciliation</summary><GovernanceContent /></details>
         <blockquote className="governance-principle">
           “Domain-specific metrics remain useful. Enterprise certification establishes which definition is used for cross-functional executive reporting.”
         </blockquote>

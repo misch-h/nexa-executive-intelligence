@@ -22,7 +22,7 @@ export default function DataPage() {
     <ExecutiveHeader />
     <section className="marketplace-intro">
       <div className="marketplace-heading-row"><SectionLabel>DATA MARKETPLACE</SectionLabel><span className="marketplace-badge">SYNTHETIC DATA · PROTOTYPE</span></div>
-      <h1>Find the data.<br />Understand it. Put it to work.</h1>
+      <h1>Find the data. Understand it. Put it to work.</h1>
       <p>Discover enterprise data products, understand their ownership and request appropriate access.</p>
     </section>
     <DataMarketplace />

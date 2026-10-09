@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import DomainBadge, { domainTone } from "./DomainBadge";
 import { supabase } from "../lib/supabase";
 import { filterDataProducts, parseDataProducts, type DataProduct } from "../lib/dataProducts";
+import ProductMotif from "./ProductMotif";
 import DataProductDetail from "./DataProductDetail";
-import SectionLabel from "./SectionLabel";
 
 type State = { status: "loading" } | { status: "error" } | { status: "ready"; products: DataProduct[] };
 
@@ -41,18 +42,20 @@ export default function DataMarketplace() {
   const filtered = filterDataProducts(products, query, domain);
   return <section className="marketplace-catalogue" aria-labelledby="marketplace-catalogue-title">
     <h2 id="marketplace-catalogue-title">Enterprise data products</h2>
+    <p className="v42-motif-disclosure">Product graphics are illustrative.</p>
     <div className="marketplace-controls">
       <label className="marketplace-search">Search products<input type="search" placeholder="Product name or description" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
       <label>Business domain<select value={domain} onChange={(event) => setDomain(event.target.value)}><option value="">All domains</option>{domains.map((value) => <option key={value}>{value}</option>)}</select></label>
       <button type="button" onClick={clear} disabled={!query && !domain}>Clear filters</button>
     </div>
     <p className="marketplace-results" role="status" aria-live="polite">{filtered.length} of {products.length} data products</p>
-    {filtered.length ? <div className="marketplace-product-grid">{filtered.map((product) => <article className="marketplace-product" key={product.product_id}>
-      <div className="marketplace-heading-row"><SectionLabel>{product.domain}</SectionLabel><span className="marketplace-product-status">{product.product_status ?? "Status not recorded"}</span></div>
+    {filtered.length ? <div className="marketplace-product-grid">{filtered.map((product) => <article className={`marketplace-product domain-${domainTone(product.domain)}`} key={product.product_id}>
+      <div className="marketplace-heading-row"><DomainBadge domain={product.domain} /><span className="marketplace-product-status">{product.product_status ?? "Status not recorded"}</span></div>
+      <ProductMotif domain={product.domain} />
       <h3><button type="button" aria-haspopup="dialog" onClick={() => setSelected(product)}>{product.product_name}</button></h3>
       <p className="marketplace-description">{product.description ?? "No description recorded."}</p>
-      <dl><div><dt>Owner</dt><dd>{product.owner_role ?? "Not recorded"}</dd></div><div><dt>Refresh cadence</dt><dd>{product.refresh_cadence ?? "Not recorded"}</dd></div><div><dt>Access classification</dt><dd>{product.access_classification ?? "Not recorded"}</dd></div></dl>
-      <button className="marketplace-view" type="button" aria-haspopup="dialog" aria-label={`View ${product.product_name} details`} onClick={() => setSelected(product)}>View product details <span aria-hidden="true">→</span></button>
+      <dl><div><dt>Refresh cadence</dt><dd>{product.refresh_cadence ?? "Not recorded"}</dd></div><div><dt>Access classification</dt><dd>{product.access_classification ?? "Not recorded"}</dd></div></dl>
+      <button className="marketplace-view" type="button" aria-haspopup="dialog" aria-label={`View ${product.product_name} details`} onClick={() => setSelected(product)}>Explore product <span aria-hidden="true">→</span></button>
     </article>)}</div> : <div className="marketplace-state"><h3>No matching data products.</h3><p>Try another search term or clear your filters.</p><button type="button" onClick={clear}>Clear filters</button></div>}
     {selected && <DataProductDetail key={selected.product_id} product={selected} onClose={() => setSelected(null)} />}
   </section>;

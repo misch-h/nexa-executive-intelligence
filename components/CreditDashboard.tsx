@@ -8,37 +8,11 @@ import {
   parseExecutiveDpd, percentage, ratesDiffer, type CreditData, type ExecutiveDpd,
 } from "../lib/credit";
 import SectionLabel from "./SectionLabel";
+import CreditDistribution from "./CreditDistribution";
 
 type State =
   | { status: "loading" | "empty" | "error" }
   | { status: "ready"; data: CreditData; executive: ExecutiveDpd[] | null };
-
-function ExposureChart({ rows, total, risk = false }: {
-  rows: { label: string; count: number; balance: number; elevated: boolean }[];
-  total: number;
-  risk?: boolean;
-}) {
-  return <div className="credit-chart" role="table" aria-label={risk ? "Outstanding exposure by risk grade" : "Outstanding exposure by delinquency bucket"}>
-    <div className="credit-chart-header" role="row">
-      <span role="columnheader">{risk ? "Risk grade" : "Delinquency"}</span>
-      <span role="columnheader">Share of balance</span>
-      <span role="columnheader">Loans</span>
-      <span role="columnheader">Outstanding balance</span>
-    </div>
-    {rows.map((row) => {
-      const share = percentage(row.balance, total);
-      return <div className={`credit-chart-row${row.elevated ? " credit-elevated" : ""}`} role="row" key={row.label}>
-        <span className="credit-chart-label" role="cell">{row.label}</span>
-        <div className="credit-chart-exposure" role="cell">
-          <div className="credit-bar-track" aria-hidden="true"><div style={{ width: `${Math.min(100, share ?? 0)}%` }} /></div>
-          <span>{creditPercent(share)}</span>
-        </div>
-        <span className="credit-chart-count" role="cell"><span className="credit-mobile-label">Loans </span>{creditCount.format(row.count)}</span>
-        <span className="credit-chart-balance" role="cell">{creditMoney(row.balance)}</span>
-      </div>;
-    })}
-  </div>;
-}
 
 export default function CreditDashboard() {
   const [state, setState] = useState<State>({ status: "loading" });
@@ -81,7 +55,7 @@ export default function CreditDashboard() {
         <SectionLabel>CREDIT &amp; LENDING</SectionLabel>
         <span className="credit-synthetic">SYNTHETIC DATA · {date ?? "REPORTING DATE PENDING"}</span>
       </div>
-      <h1>Origination performance.<br />Portfolio health. <span>Emerging risk.</span></h1>
+      <h1>Credit &amp; Lending</h1>
       <p>A view of lending growth, customer conversion and the balance exposed to credit risk.</p>
     </section>
     {state.status === "loading" && <div className="credit-state" role="status">Loading credit and lending data…</div>}
@@ -134,18 +108,20 @@ function CreditSnapshot({ data, executive }: { data: CreditData; executive: Exec
       <p className="credit-copy">{creditCount.format(overview.declined_applications)} applications were declined ({creditPercent(percentage(overview.declined_applications, overview.total_applications))} of applications). Funded loans represent a separate population; approval-to-funding conversion is indicative until cohort linkage is validated. The gap between approvals and funded loans cannot yet be treated as customer dropout.</p>
     </section>
 
+    <div className="v4-credit-analytics">
     <section className="credit-section" aria-labelledby="credit-quality-title">
-      <SectionLabel>PORTFOLIO QUALITY</SectionLabel><h2 id="credit-quality-title">Delinquency through the lens of exposure.</h2>
-      <p className="credit-copy">Bars show the share of outstanding balance, alongside loan counts. The 30+ DPD rate includes the 30–59, 60–89 and 90+ DPD buckets.</p>
-      <ExposureChart total={calculated.portfolio} rows={delinquency.map((row) => ({ label: row.delinquency_bucket, count: row.loan_count, balance: row.outstanding_balance_aed, elevated: row.bucket_order >= 3 }))} />
+      <SectionLabel>PORTFOLIO QUALITY</SectionLabel><h2 id="credit-quality-title">Delinquency Distribution</h2>
+      <p className="credit-copy">Overall loan-count shares and delinquent buckets. Balance-weighted risk is reported separately in the scorecard.</p>
+      <CreditDistribution total={calculated.portfolio} rows={delinquency.map((row) => ({ label: row.delinquency_bucket, count: row.loan_count, balance: row.outstanding_balance_aed, elevated: row.bucket_order >= 3 }))} />
     </section>
 
     <section className="credit-section" aria-labelledby="credit-risk-title">
-      <SectionLabel>RISK CONCENTRATION</SectionLabel><h2 id="credit-risk-title">Where the portfolio balance is concentrated.</h2>
+      <SectionLabel>RISK CONCENTRATION</SectionLabel><h2 id="credit-risk-title">Portfolio by Risk Grade</h2>
       <p className="credit-copy">Exposure by risk grade A–E. Grades D and E are highlighted as higher-risk populations; balance share takes priority over loan count.</p>
-      <ExposureChart risk total={calculated.riskTotal} rows={risk.map((row) => ({ label: `Grade ${row.risk_grade}`, count: row.loan_count, balance: row.outstanding_balance_aed, elevated: ["D", "E"].includes(row.risk_grade) }))} />
+      <CreditDistribution risk total={calculated.riskTotal} rows={[...risk].sort((a, b) => b.outstanding_balance_aed - a.outstanding_balance_aed).map((row) => ({ label: `Grade ${row.risk_grade}`, count: row.loan_count, balance: row.outstanding_balance_aed, elevated: ["D", "E"].includes(row.risk_grade) }))} />
     </section>
 
+    </div>
     <section className="credit-interpretation" aria-labelledby="credit-interpretation-title">
       <SectionLabel>EXECUTIVE INTERPRETATION</SectionLabel><h2 id="credit-interpretation-title">Growth and risk, read together.</h2>
       <div className="credit-interpretation-grid">

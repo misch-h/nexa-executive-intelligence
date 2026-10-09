@@ -1,8 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import DomainBadge from "./DomainBadge";
 import { supabase } from "../lib/supabase";
 import { catalogueSummary, filterCatalogue, governanceDescriptions, parseCatalogue, type CatalogueMetric } from "../lib/catalogue";
+import VisualLegend from "./VisualLegend";
+import { certificationTone } from "../lib/visualSemantics";
+import CertificationBadge from "./CertificationBadge";
 import CatalogueDetail from "./CatalogueDetail";
 
 type CatalogueState = { status: "loading" } | { status: "error" } | { status: "ready"; metrics: CatalogueMetric[] };
@@ -42,13 +46,16 @@ export default function MetricCatalogue() {
   const summary = catalogueSummary(metrics);
   const domains = [...new Set(metrics.map((metric) => metric.domain))].sort();
   const statuses = [...new Set([...Object.keys(governanceDescriptions), ...metrics.map((metric) => metric.certification_status)])];
+  const certificationCounts = [...new Set(metrics.map(metric => metric.certification_status))].map(label => ({ label, count: metrics.filter(metric => metric.certification_status === label).length }));
   const filtered = filterCatalogue(metrics, query, domain, status);
   function clear() { setQuery(""); setDomain(""); setStatus(""); }
   return <>
     <dl className="dictionary-summary">
-      {[ ["Total metrics", summary.total], ["Executive Certified", summary.certified], ["Proposed", summary.proposed], ["Business domains", summary.domains] ].map(([label, count]) => <div key={label}><dt>{label}</dt><dd>{count}</dd></div>)}
+      {[ ["Total metrics", summary.total], ["Executive Certified", summary.certified], ["Proposed", summary.proposed], ["Certification percentage", `${metrics.length ? (summary.certified / metrics.length * 100).toFixed(1) : "0.0"}%`] ].map(([label, count]) => <div key={label}><dt>{label}</dt><dd>{count}</dd></div>)}
     </dl>
-    <div className="dictionary-governance">{Object.entries(governanceDescriptions).map(([label, description]) => <p key={label}><strong>{label}</strong><span>{description}</span></p>)}</div>
+    <div className="v41-certification-stack v42-summary-progress" role="img" aria-label={`Certification distribution: ${certificationCounts.map(item => `${item.label}, ${item.count} metrics`).join("; ") || "No metrics published"}`}>{certificationCounts.map(item => <span key={item.label} aria-hidden="true" className={`legend-cert-${certificationTone(item.label)}`} style={{ width: `${item.count / metrics.length * 100}%` }} />)}</div>
+    <VisualLegend kind="domain" domains={domains} /><VisualLegend kind="certification" statuses={statuses} />
+    <details className="v42-certification-guide"><summary>Understand certification labels</summary><div className="dictionary-governance">{Object.entries(governanceDescriptions).map(([label, description]) => <p key={label}><strong>{label}</strong><span>{description}</span></p>)}</div></details>
     {!metrics.length ? <div className="dictionary-state" role="status"><h2>No metrics are published yet.</h2><p>The catalogue returned no visible records.</p><button type="button" onClick={retry}>Refresh catalogue</button></div> : <section aria-labelledby="dictionary-catalogue-title">
       <h2 id="dictionary-catalogue-title" className="dictionary-catalogue-title">Enterprise metric catalogue</h2>
       <div className="dictionary-controls">
@@ -61,9 +68,9 @@ export default function MetricCatalogue() {
       {filtered.length ? <div className="dictionary-table-wrap" role="region" aria-label="Metric catalogue table" tabIndex={0}><table className="dictionary-table">
         <caption className="dictionary-sr-only">Enterprise definitions and ownership. Select a metric name to view its definition and lineage.</caption>
         <thead><tr><th scope="col">Metric name</th><th scope="col">Domain</th><th scope="col">Owner</th><th scope="col">Certification status</th><th scope="col">Refresh cadence</th></tr></thead>
-        <tbody>{filtered.map((metric) => <tr key={metric.metric_id} onClick={() => setSelected(metric)}>
+        <tbody>{filtered.map((metric) => <tr aria-selected={selected?.metric_id === metric.metric_id} key={metric.metric_id} onClick={() => setSelected(metric)}>
           <th scope="row"><button type="button" onClick={() => setSelected(metric)} aria-haspopup="dialog">{metric.metric_name}</button><span className="dictionary-metric-id">{metric.metric_id}</span></th>
-          <td>{metric.domain}</td><td>{metric.owner_role ?? "Not recorded"}</td><td><span className={metric.certification_status === "Executive Certified" ? "dictionary-certified" : "dictionary-status"}>{metric.certification_status}</span></td><td>{metric.refresh_cadence ?? "Not recorded"}</td>
+          <td><DomainBadge domain={metric.domain} /></td><td>{metric.owner_role ?? "Not recorded"}</td><td><CertificationBadge status={metric.certification_status} /></td><td>{metric.refresh_cadence ?? "Not recorded"}</td>
         </tr>)}</tbody>
       </table></div> : <div className="dictionary-state"><h3>No matching metrics.</h3><p>Try another search term or clear the filters.</p><button type="button" onClick={clear}>Clear filters</button></div>}
     </section>}
